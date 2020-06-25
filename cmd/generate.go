@@ -3,30 +3,17 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"sort"
 
+	"github.com/clarafu/release-me/generate"
 	"github.com/clarafu/release-me/github"
 	"github.com/spf13/cobra"
 )
-
-type PullRequestNotLabelled struct {
-	Number int
-}
-
-func (e PullRequestNotLabelled) Error() string {
-	return fmt.Sprintf(`Pull request #%d must be labelled with at least one of:
-	
-- breaking
-- enhancement
-- bug
-- release/no-impact`, e.Number)
-}
 
 var generateCmd = &cobra.Command{
 	Use:   "generate",
 	Short: "generate",
 	Long:  `TODO`,
-	Run:  generateReleaseNote,
+	Run:   generateReleaseNote,
 }
 
 func init() {
@@ -43,7 +30,7 @@ func generateReleaseNote(cmd *cobra.Command, args []string) {
 
 	client := github.New(githubToken)
 
-	githubOwner, _  := cmd.Flags().GetString("github-owner")
+	githubOwner, _ := cmd.Flags().GetString("github-owner")
 	githubRepo, _ := cmd.Flags().GetString("github-repo")
 
 	commitSHA, err := client.FetchLatestReleaseCommitSHA(githubOwner, githubRepo)
@@ -55,51 +42,12 @@ func generateReleaseNote(cmd *cobra.Command, args []string) {
 
 	pullRequests, err := client.FetchPullRequestsAfterCommit(githubOwner, githubRepo, githubBranch, commitSHA)
 	if err != nil {
-		 failf("failed to fetch pull requests: %s", err)
+		failf("failed to fetch pull requests: %s", err)
 	}
 
-	sort.Slice(pullRequests, func(i, j int) bool {
-		return pullRequests[i].Number < pullRequests[j].Number
-	})
-
-	var breakingPRs []github.PullRequest
-	var noImpactPRs []github.PullRequest
-	var featurePRs []github.PullRequest
-	var bugFixPRs []github.PullRequest
-	for _, pr := range pullRequests {
-		if pr.HasLabel("breaking") {
-			breakingPRs = append(breakingPRs, pr)
-			continue
-		}
-
-		if pr.HasLabel("release/no-impact") {
-			noImpactPRs = append(noImpactPRs, pr)
-			continue
-		}
-
-		if pr.HasLabel("enhancement") {
-			featurePRs = append(featurePRs, pr)
-			continue
-		}
-
-		if pr.HasLabel("bug") {
-			bugFixPRs = append(bugFixPRs, pr)
-			continue
-		}
-
-		failf(PullRequestNotLabelled{Number: pr.Number}.Error())
-	}
-
-	sections := []Section{
-		Section{Title: "Breaking", Icon: "🚨", PRs: breakingPRs},
-		Section{Title: "Features", Icon: "✈️", PRs: featurePRs},
-		Section{Title: "Bug Fixes", Icon: "🐞", PRs: bugFixPRs},
-		Section{Title: "No Impact", Icon: "🤷", PRs: noImpactPRs},
-	}
-
-	err = WriteReleaseNotes(os.Stdout, sections)
+	err = generate.Generate(os.Stdout, pullRequests)
 	if err != nil {
-		failf("failed to write release notes: %s", err)
+		failf("failed to generate release note: %s", err)
 	}
 }
 

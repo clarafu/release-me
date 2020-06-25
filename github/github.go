@@ -16,6 +16,7 @@ type PullRequest struct {
 	ID     string
 	Number int
 	Title  string
+	Body   string
 	Author string
 	Labels []string
 	Merged bool
@@ -69,7 +70,7 @@ func (g GitHub) FetchLatestReleaseCommitSHA(owner, repo string) (string, error) 
 	var releaseSHA string
 	if len(releaseSHAQuery.Repository.Releases.Nodes) > 0 {
 		releaseSHA = releaseSHAQuery.Repository.Releases.Nodes[0].Tag.Target.Oid
-	}	
+	}
 
 	return releaseSHA, nil
 }
@@ -87,6 +88,7 @@ func (g GitHub) FetchPullRequestsAfterCommit(owner, repo, branch, commitSHA stri
 									Nodes []struct {
 										ID     string
 										Title  string
+										Body   string
 										Author struct {
 											Login string
 										}
@@ -147,9 +149,10 @@ func (g GitHub) FetchPullRequestsAfterCommit(owner, repo, branch, commitSHA stri
 				}
 
 				pullRequests = append(pullRequests, PullRequest{
-					ID: pr.ID,
+					ID:     pr.ID,
 					Number: pr.Number,
-					Title: pr.Title,
+					Title:  pr.Title,
+					Body:   pr.Body,
 					Author: pr.Author.Login,
 					Labels: labels,
 					Merged: pr.Merged,
