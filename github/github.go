@@ -42,6 +42,38 @@ func New(token string) GitHub {
 	}
 }
 
+func (g GitHub) FetchLabelsForPullRequest(owner, repo string, pullRequestNumber int) ([]string, error) {
+	var PullRequestlabelsQuery struct {
+		Repository struct {
+			PullRequest struct {
+				Labels struct {
+					Nodes []struct {
+						Name string
+					}
+				} `graphql:"labels(first: 10)"`
+			} `graphql:"pullRequest(number: $prNumber)"`
+		} `graphql:"repository(owner: $owner, name: $name)"`
+	}
+
+	PRVariables := map[string]interface{}{
+		"owner":    githubv4.String(owner),
+		"name":     githubv4.String(repo),
+		"prNumber": githubv4.Int(pullRequestNumber),
+	}
+
+	err := g.client.Query(context.Background(), &PullRequestlabelsQuery, PRVariables)
+	if err != nil {
+		return nil, err
+	}
+
+	var labels []string
+	for _, node := range PullRequestlabelsQuery.Repository.PullRequest.Labels.Nodes {
+		labels = append(labels, node.Name)
+	}
+
+	return labels, nil
+}
+
 func (g GitHub) FetchLatestReleaseCommitSHA(owner, repo string) (string, error) {
 	var releaseSHAQuery struct {
 		Repository struct {

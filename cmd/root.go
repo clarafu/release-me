@@ -26,4 +26,5 @@ func init() {
 	rootCmd.MarkFlagRequired("github-repo")
 
 	rootCmd.AddCommand(generateCmd)
+	rootCmd.AddCommand(validateCmd)
 }
