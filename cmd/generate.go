@@ -11,22 +11,19 @@ import (
 
 var generateCmd = &cobra.Command{
 	Use:   "generate",
-	Short: "generate",
-	Long:  `TODO`,
+	Short: "Generates a release note using pull requests",
+	Long: `A release note is generated through fetching all the pull requests
+	merged after the latest tag (release) of the repository. The release note
+	is outputted to stdout.`,
 	Run:   generateReleaseNote,
 }
 
 func init() {
-	generateCmd.Flags().String("github-owner", "", "the login field of a github user or organization")
-	generateCmd.Flags().String("github-repo", "", "the name of the github repository")
 	generateCmd.Flags().String("github-branch", "master", "the branch name of the github repository to pull the pull requests from")
-
-	generateCmd.MarkFlagRequired("github-owner")
-	generateCmd.MarkFlagRequired("github-repo")
 }
 
 func generateReleaseNote(cmd *cobra.Command, args []string) {
-	githubToken, _ := rootCmd.Flags().GetString("github-token")
+	githubToken, _ := cmd.Flags().GetString("github-token")
 
 	client := github.New(githubToken)
 
@@ -45,7 +42,9 @@ func generateReleaseNote(cmd *cobra.Command, args []string) {
 		failf("failed to fetch pull requests: %s", err)
 	}
 
-	err = generate.Generate(os.Stdout, pullRequests)
+	g := generate.New(generate.NewReleaseNoteTemplater(os.Stdout))
+
+	err = g.Generate(pullRequests)
 	if err != nil {
 		failf("failed to generate release note: %s", err)
 	}

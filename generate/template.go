@@ -33,7 +33,7 @@ const rawTemplate = `
 
 {{ range $pr := $section.PRs }}
 * **{{$pr.Title}} (#{{$pr.Number}})** @{{$pr.Author}} <sub><sup><a name="{{$pr.Number}}" href="#{{$pr.Number}}">:link:</a></sup></sub>  
-{{if $pr.ReleaseNote}}{{ $pr.ReleaseNote | indent 2 }}{{end}}
+{{ $pr.ReleaseNote | indent 2 }}
 {{end}}
 {{end}}
 {{end}}
@@ -45,8 +45,18 @@ var funcMap = template.FuncMap{
 
 var releaseNotesTemplate = template.Must(template.New("release_notes").Funcs(funcMap).Parse(rawTemplate))
 
-func writeReleaseNotes(w io.Writer, sections []Section) error {
-	return releaseNotesTemplate.Execute(w, struct {
+type ReleaseNoteTemplater struct {
+	w io.Writer
+}
+
+func NewReleaseNoteTemplater(w io.Writer) *ReleaseNoteTemplater {
+	return &ReleaseNoteTemplater{
+		w: w,
+	}
+}
+
+func (r *ReleaseNoteTemplater) Render(sections []Section) error {
+	return releaseNotesTemplate.Execute(r.w, struct {
 		Sections []Section
 	}{
 		Sections: sections,

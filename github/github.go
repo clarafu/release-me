@@ -20,6 +20,7 @@ type PullRequest struct {
 	Author string
 	Labels []string
 	Merged bool
+	Url    string
 }
 
 func (pr PullRequest) HasLabel(label string) bool {
@@ -99,6 +100,7 @@ func (g GitHub) FetchPullRequestsAfterCommit(owner, repo, branch, commitSHA stri
 										} `graphql:"labels(first: 10)"`
 										Number int
 										Merged bool
+										Url    githubv4.URI
 									}
 								} `graphql:"associatedPullRequests(first: 5)"`
 							}
@@ -148,6 +150,11 @@ func (g GitHub) FetchPullRequestsAfterCommit(owner, repo, branch, commitSHA stri
 					labels[i] = l.Name
 				}
 
+				url, err := pr.Url.MarshalJSON()
+				if err != nil {
+					return nil, fmt.Errorf("failed to format url: %w", err)
+				}
+
 				pullRequests = append(pullRequests, PullRequest{
 					ID:     pr.ID,
 					Number: pr.Number,
@@ -156,6 +163,7 @@ func (g GitHub) FetchPullRequestsAfterCommit(owner, repo, branch, commitSHA stri
 					Author: pr.Author.Login,
 					Labels: labels,
 					Merged: pr.Merged,
+					Url:    string(url),
 				})
 			}
 		}

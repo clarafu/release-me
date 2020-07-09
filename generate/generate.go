@@ -1,32 +1,51 @@
 package generate
 
 import (
-	"io"
-	"sort"
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/clarafu/release-me/github"
 )
 
-type PullRequestNotLabelled struct {
-	Number int
+type PullRequestsNotLabelled struct {
+	Urls []string
 }
 
-func (e PullRequestNotLabelled) Error() string {
-	return fmt.Sprintf(`Pull request #%d must be labelled with at least one of:
+func (e PullRequestsNotLabelled) Error() string {
+	prUrls := []string{}
+	for _, url := range e.Urls {
+		prUrls = append(prUrls, "- "+url)
+	}
+	return fmt.Sprintf(`
+
+The following pull requests: 
+%s
 	
+must be labelled with at least one of:
 - breaking
 - enhancement
 - bug
-- release/no-impact`, e.Number)
+- release/no-impact`, strings.Join(prUrls, "\n"))
 }
 
-func Generate(w io.Writer, prs []github.PullRequest) error {
-	sort.Slice(prs, func(i, j int) bool {
-		return prs[i].Number < prs[j].Number
-	})
+type Template interface {
+	Render(sections []Section) error
+}
+
+type Generator struct {
+	template Template
+}
+
+func New(template Template) Generator {
+	return Generator{template}
+}
+
+func (g Generator) Generate(prs []github.PullRequest) error {
+	g.sortPRsByPriority(prs)
 
 	var breakingPRs, noImpactPRs, featurePRs, bugFixPRs []PullRequest
+	var unlabelledPRUrls []string
 	for _, githubPR := range prs {
 		pr := PullRequest{
 			Title:       githubPR.Title,
@@ -55,7 +74,11 @@ func Generate(w io.Writer, prs []github.PullRequest) error {
 			continue
 		}
 
-		return PullRequestNotLabelled{Number: pr.Number}
+		unlabelledPRUrls = append(unlabelledPRUrls, githubPR.Url)
+	}
+
+	if len(unlabelledPRUrls) > 0 {
+		return PullRequestsNotLabelled{Urls: unlabelledPRUrls}
 	}
 
 	sections := []Section{
@@ -65,10 +88,29 @@ func Generate(w io.Writer, prs []github.PullRequest) error {
 		Section{Title: "No Impact", Icon: "🤷", PRs: noImpactPRs},
 	}
 
-	err := writeReleaseNotes(w, sections)
+	err := g.template.Render(sections)
 	if err != nil {
 		return fmt.Errorf("failed to write release notes: %w", err)
 	}
 
 	return nil
+}
+
+func (g Generator) sortPRsByPriority(prs []github.PullRequest) {
+	sort.Slice(prs, func(i, j int) bool {
+		switch prs[i].HasLabel("priority") != prs[j].HasLabel("priority") {
+		case true:
+			if prs[i].HasLabel("priority") {
+				return true
+			}
+			return false
+
+		case false:
+			// If both prs have the same priority (both have the priority label
+			// or both do not), order by the pr number
+			return prs[i].Number < prs[j].Number
+		default:
+			panic("this should never happen!")
+		}
+	})
 }
