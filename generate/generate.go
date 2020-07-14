@@ -8,25 +8,36 @@ import (
 	"github.com/clarafu/release-me/github"
 )
 
+// The ordering of this list is the order of precedence of the labels
+var ValidLabels = []string{
+	"breaking",
+	"release/no-impact",
+	"enhancement",
+	"bug",
+}
+
 type PullRequestsNotLabelled struct {
-	Urls []string
+	Identifiers []string
 }
 
 func (e PullRequestsNotLabelled) Error() string {
-	prUrls := []string{}
-	for _, url := range e.Urls {
-		prUrls = append(prUrls, "- "+url)
+	prIdentifiers := []string{}
+	for _, identifier := range e.Identifiers {
+		prIdentifiers = append(prIdentifiers, "- "+identifier)
 	}
+
+	validLabels := []string{}
+	for _, label := range ValidLabels {
+		validLabels = append(validLabels, "- "+label)
+	}
+
 	return fmt.Sprintf(`
 
-The following pull requests: 
+The following pull request(s): 
 %s
 	
 must be labelled with at least one of:
-- breaking
-- enhancement
-- bug
-- release/no-impact`, strings.Join(prUrls, "\n"))
+%s`, strings.Join(prIdentifiers, "\n"), strings.Join(validLabels, "\n"))
 }
 
 type Template interface {
@@ -44,8 +55,8 @@ func New(template Template) Generator {
 func (g Generator) Generate(prs []github.PullRequest) error {
 	g.sortPRsByPriority(prs)
 
-	var breakingPRs, noImpactPRs, featurePRs, bugFixPRs []PullRequest
 	var unlabelledPRUrls []string
+	sectionPRs := make(map[string][]PullRequest)
 	for _, githubPR := range prs {
 		pr := PullRequest{
 			Title:       githubPR.Title,
@@ -54,38 +65,29 @@ func (g Generator) Generate(prs []github.PullRequest) error {
 			ReleaseNote: parseReleaseNote(githubPR.Body),
 		}
 
-		if githubPR.HasLabel("breaking") {
-			breakingPRs = append(breakingPRs, pr)
-			continue
+		var labelled bool
+		for _, label := range ValidLabels {
+			if githubPR.HasLabel(label) {
+				sectionPRs[label] = append(sectionPRs[label], pr)
+				labelled = true
+				break
+			}
 		}
 
-		if githubPR.HasLabel("release/no-impact") {
-			noImpactPRs = append(noImpactPRs, pr)
-			continue
+		if !labelled {
+			unlabelledPRUrls = append(unlabelledPRUrls, githubPR.Url)
 		}
-
-		if githubPR.HasLabel("enhancement") {
-			featurePRs = append(featurePRs, pr)
-			continue
-		}
-
-		if githubPR.HasLabel("bug") {
-			bugFixPRs = append(bugFixPRs, pr)
-			continue
-		}
-
-		unlabelledPRUrls = append(unlabelledPRUrls, githubPR.Url)
 	}
 
 	if len(unlabelledPRUrls) > 0 {
-		return PullRequestsNotLabelled{Urls: unlabelledPRUrls}
+		return PullRequestsNotLabelled{Identifiers: unlabelledPRUrls}
 	}
 
 	sections := []Section{
-		Section{Title: "Breaking", Icon: "🚨", PRs: breakingPRs},
-		Section{Title: "Features", Icon: "✈️", PRs: featurePRs},
-		Section{Title: "Bug Fixes", Icon: "🐞", PRs: bugFixPRs},
-		Section{Title: "No Impact", Icon: "🤷", PRs: noImpactPRs},
+		Section{Title: "Breaking", Icon: "🚨", PRs: sectionPRs["breaking"]},
+		Section{Title: "Features", Icon: "✈️", PRs: sectionPRs["enhancement"]},
+		Section{Title: "Bug Fixes", Icon: "🐞", PRs: sectionPRs["bug"]},
+		Section{Title: "No Impact", Icon: "🤷", PRs: sectionPRs["release/no-impact"]},
 	}
 
 	err := g.template.Render(sections)
@@ -113,4 +115,19 @@ func (g Generator) sortPRsByPriority(prs []github.PullRequest) {
 			panic("this should never happen!")
 		}
 	})
+}
+
+func Validate(labels []string) bool {
+	validLabelsMap := make(map[string]bool)
+	for _, validLabel := range ValidLabels {
+		validLabelsMap[validLabel] = true
+	}
+	
+	for _, label := range labels {
+		if _, exists := validLabelsMap[label]; exists {
+			return true
+		}
+	}
+
+	return false
 }

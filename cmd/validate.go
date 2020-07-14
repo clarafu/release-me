@@ -2,22 +2,19 @@ package cmd
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/clarafu/release-me/github"
+	"github.com/clarafu/release-me/generate"
 	"github.com/spf13/cobra"
 )
 
-var ValidLabels = map[string]bool{
-	"breaking":          true,
-	"release/no-impact": true,
-	"enhancement":       true,
-	"bug":               true,
-}
-
 var validateCmd = &cobra.Command{
 	Use:   "validate",
-	Short: "Validates ..",
-	Long:  `TODO`,
+	Short: "Validates the pull request has correct labels.",
+	Long: `Ensures that the pull request given has at least one of the labels
+	required to properly generate a release note using the "generate"
+	command.`,
 	Run:   validate,
 }
 
@@ -45,19 +42,11 @@ func validate(cmd *cobra.Command, args []string) {
 		failf("failed fetch labels for pull request: %s", err)
 	}
 
-	var hasValidLabels bool
-dance:
-	for _, label := range labels {
-		if _, exists := ValidLabels[label]; exists {
-			hasValidLabels = true
-			break dance
-		}
-	}
-
+	hasValidLabels := generate.Validate(labels)
 	if !hasValidLabels {
-		failf("pull request #%d does not have valid labels", prNumber)
+		failf("invalid pull request %s", generate.PullRequestsNotLabelled{Identifiers: []string{strconv.Itoa(prNumber)}})
 	}
 
-	fmt.Printf("pull request #%d has valid labels", prNumber)
+	fmt.Printf("pull request #%d has valid labels\n", prNumber)
 }
 

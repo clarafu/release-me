@@ -15,7 +15,7 @@ var generateCmd = &cobra.Command{
 	Long: `A release note is generated through fetching all the pull requests
 	merged after the latest tag (release) of the repository. The release note
 	is outputted to stdout.`,
-	Run:   generateReleaseNote,
+	Run: generateReleaseNote,
 }
 
 func init() {
