@@ -7,8 +7,9 @@ import (
 var (
 	rootCmd = &cobra.Command{
 		Use:   "releaseme",
-		Short: "",
-		Long:  `TODO`,
+		Short: "CLI to generate release note for your repository.",
+		Long: `Generates a release note using the pull requests within your
+		repository.`,
 	}
 )
 
