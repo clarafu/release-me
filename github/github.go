@@ -108,6 +108,39 @@ func (g GitHub) FetchLatestReleaseCommitSHA(owner, repo string) (string, error) 
 	return releaseSHA, nil
 }
 
+func (g GitHub) FetchCommitFromTag(owner, repo, tag string) (string, error) {
+	var releaseSHAQuery struct {
+		Repository struct {
+			Refs struct {
+				Nodes []struct {
+					Target struct {
+						Oid string
+					}
+				}
+			} `graphql:"refs(refPrefix: "refs/tags/", first: 1, query: $tag)"`
+		} `graphql:"repository(owner: $owner, name: $name)"`
+	}
+
+	releaseSHAVariables := map[string]interface{}{
+		"owner": githubv4.String(owner),
+		"name":  githubv4.String(repo),
+		"tag":   githubv4.String(tag),
+	}
+
+	err := g.client.Query(context.Background(), &releaseSHAQuery, releaseSHAVariables)
+	if err != nil {
+		return "", err
+	}
+
+	// If the repository does not have a release, return an empty string
+	var releaseSHA string
+	if len(releaseSHAQuery.Repository.Refs.Nodes) > 0 {
+		releaseSHA = releaseSHAQuery.Repository.Refs.Nodes[0].Target.Oid
+	}
+
+	return releaseSHA, nil
+}
+
 func (g GitHub) FetchPullRequestsAfterCommit(owner, repo, branch, commitSHA string) ([]PullRequest, error) {
 	var pullRequestsQuery struct {
 		Repository struct {
