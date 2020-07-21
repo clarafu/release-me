@@ -163,7 +163,7 @@ func (s *GenerateSuite) TestGenerate() {
 			},
 
 			GenerateErr: generate.PullRequestsNotLabelled{
-				Urls: []string{
+				Identifiers: []string{
 					"http://pr/1",
 					"http://pr/3",
 				},

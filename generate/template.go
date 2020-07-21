@@ -27,9 +27,8 @@ func indent(spaces int, v string) string {
 const rawTemplate = `
 {{range $section := .Sections}}
 {{if $section.PRs }}
-<br />
 
-# {{$section.Icon}} {{$section.Title}}
+## {{$section.Icon}} {{$section.Title}}
 
 {{ range $pr := $section.PRs }}
 * **{{$pr.Title}} (#{{$pr.Number}})** @{{$pr.Author}} <sub><sup><a name="{{$pr.Number}}" href="#{{$pr.Number}}">:link:</a></sup></sub>  
