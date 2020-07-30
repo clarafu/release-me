@@ -30,12 +30,17 @@ func generateReleaseNote(cmd *cobra.Command, args []string) {
 	githubOwner, _ := cmd.Flags().GetString("github-owner")
 	githubRepo, _ := cmd.Flags().GetString("github-repo")
 
-	commitSHA, err := client.FetchLatestReleaseCommitSHA(githubOwner, githubRepo)
+	releaseSHAs, err := client.FetchCommitsFromReleases(githubOwner, githubRepo)
 	if err != nil {
-		failf("failed to fetch latest release commit SHA from github: %s", err)
+		failf("failed to fetch release commit SHAs from github: %s", err)
 	}
 
 	githubBranch, _ := cmd.Flags().GetString("github-branch")
+
+	commitSHA, err := client.FetchLatestReleaseCommitFromBranch(githubOwner, githubRepo, githubBranch, releaseSHAs)
+	if err != nil {
+		failf("failed to fetch latest release commit from branch: %s", err)
+	}
 
 	pullRequests, err := client.FetchPullRequestsAfterCommit(githubOwner, githubRepo, githubBranch, commitSHA)
 	if err != nil {

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/clarafu/release-me/github"
 	"github.com/clarafu/release-me/generate"
+	"github.com/clarafu/release-me/github"
 	"github.com/spf13/cobra"
 )
 
@@ -15,7 +15,7 @@ var validateCmd = &cobra.Command{
 	Long: `Ensures that the pull request given has at least one of the labels
 	required to properly generate a release note using the "generate"
 	command.`,
-	Run:   validate,
+	Run: validate,
 }
 
 func init() {
@@ -49,4 +49,3 @@ func validate(cmd *cobra.Command, args []string) {
 
 	fmt.Printf("pull request #%d has valid labels\n", prNumber)
 }
-

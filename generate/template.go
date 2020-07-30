@@ -31,7 +31,7 @@ const rawTemplate = `
 ## {{$section.Icon}} {{$section.Title}}
 
 {{ range $pr := $section.PRs }}
-* **{{$pr.Title}} (#{{$pr.Number}})** @{{$pr.Author}} <sub><sup><a name="{{$pr.Number}}" href="#{{$pr.Number}}">:link:</a></sup></sub>  
+* {{$pr.Title}} (#{{$pr.Number}}) @{{$pr.Author}} <sub><sup><a name="{{$pr.Number}}" href="#{{$pr.Number}}">:link:</a></sup></sub>  
 {{ $pr.ReleaseNote | indent 2 }}
 {{end}}
 {{end}}

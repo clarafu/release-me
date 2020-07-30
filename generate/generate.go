@@ -122,7 +122,7 @@ func Validate(labels []string) bool {
 	for _, validLabel := range ValidLabels {
 		validLabelsMap[validLabel] = true
 	}
-	
+
 	for _, label := range labels {
 		if _, exists := validLabelsMap[label]; exists {
 			return true

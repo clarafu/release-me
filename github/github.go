@@ -42,40 +42,8 @@ func New(token string) GitHub {
 	}
 }
 
-func (g GitHub) FetchLabelsForPullRequest(owner, repo string, pullRequestNumber int) ([]string, error) {
-	var PullRequestlabelsQuery struct {
-		Repository struct {
-			PullRequest struct {
-				Labels struct {
-					Nodes []struct {
-						Name string
-					}
-				} `graphql:"labels(first: 10)"`
-			} `graphql:"pullRequest(number: $prNumber)"`
-		} `graphql:"repository(owner: $owner, name: $name)"`
-	}
-
-	PRVariables := map[string]interface{}{
-		"owner":    githubv4.String(owner),
-		"name":     githubv4.String(repo),
-		"prNumber": githubv4.Int(pullRequestNumber),
-	}
-
-	err := g.client.Query(context.Background(), &PullRequestlabelsQuery, PRVariables)
-	if err != nil {
-		return nil, err
-	}
-
-	var labels []string
-	for _, node := range PullRequestlabelsQuery.Repository.PullRequest.Labels.Nodes {
-		labels = append(labels, node.Name)
-	}
-
-	return labels, nil
-}
-
-func (g GitHub) FetchLatestReleaseCommitSHA(owner, repo string) (string, error) {
-	var releaseSHAQuery struct {
+func (g GitHub) FetchCommitsFromReleases(owner, repo string) (map[string]bool, error) {
+	var releaseSHAsQuery struct {
 		Repository struct {
 			Releases struct {
 				Nodes []struct {
@@ -85,60 +53,81 @@ func (g GitHub) FetchLatestReleaseCommitSHA(owner, repo string) (string, error) 
 						}
 					}
 				}
-			} `graphql:"releases(last: 1, orderBy:{direction: ASC, field: NAME})"`
+			} `graphql:"releases(first: 50, orderBy: {direction: DESC, field: CREATED_AT})"`
 		} `graphql:"repository(owner: $owner, name: $name)"`
 	}
 
-	releaseSHAVariables := map[string]interface{}{
+	releaseSHAsVariables := map[string]interface{}{
 		"owner": githubv4.String(owner),
 		"name":  githubv4.String(repo),
 	}
 
-	err := g.client.Query(context.Background(), &releaseSHAQuery, releaseSHAVariables)
+	err := g.client.Query(context.Background(), &releaseSHAsQuery, releaseSHAsVariables)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	// If the repository does not have a release, return an empty string
-	var releaseSHA string
-	if len(releaseSHAQuery.Repository.Releases.Nodes) > 0 {
-		releaseSHA = releaseSHAQuery.Repository.Releases.Nodes[0].Tag.Target.Oid
+	releaseSHAs := map[string]bool{}
+	for _, release := range releaseSHAsQuery.Repository.Releases.Nodes {
+		releaseSHAs[release.Tag.Target.Oid] = true
 	}
 
-	return releaseSHA, nil
+	return releaseSHAs, nil
 }
 
-func (g GitHub) FetchCommitFromTag(owner, repo, tag string) (string, error) {
-	var releaseSHAQuery struct {
+func (g GitHub) FetchLatestReleaseCommitFromBranch(owner, repo, branch string, releaseSHAs map[string]bool) (string, error) {
+	var commitsQuery struct {
 		Repository struct {
-			Refs struct {
-				Nodes []struct {
-					Target struct {
-						Oid string
-					}
+			Ref struct {
+				Target struct {
+					Commit struct {
+						History struct {
+							Nodes []struct {
+								Oid string
+							}
+							PageInfo struct {
+								EndCursor   githubv4.String
+								HasNextPage bool
+							}
+						} `graphql:"history(first: 100, after: $commitCursor)"`
+					} `graphql:"... on Commit"`
 				}
-			} `graphql:"refs(refPrefix: "refs/tags/", first: 1, query: $tag)"`
+			} `graphql:"ref(qualifiedName: $branch)"`
 		} `graphql:"repository(owner: $owner, name: $name)"`
 	}
 
-	releaseSHAVariables := map[string]interface{}{
-		"owner": githubv4.String(owner),
-		"name":  githubv4.String(repo),
-		"tag":   githubv4.String(tag),
+	commitsVariables := map[string]interface{}{
+		"owner":        githubv4.String(owner),
+		"name":         githubv4.String(repo),
+		"branch":       githubv4.String(branch),
+		"commitCursor": (*githubv4.String)(nil),
 	}
 
-	err := g.client.Query(context.Background(), &releaseSHAQuery, releaseSHAVariables)
-	if err != nil {
-		return "", err
+	var lastCommit string
+	for {
+		err := g.client.Query(context.Background(), &commitsQuery, commitsVariables)
+		if err != nil {
+			return "", fmt.Errorf("failed to fetch commits from github: %w", err)
+		}
+
+		history := commitsQuery.Repository.Ref.Target.Commit.History
+		for _, commit := range history.Nodes {
+			lastCommit = commit.Oid
+
+			if _, found := releaseSHAs[commit.Oid]; found {
+				return commit.Oid, nil
+			}
+		}
+
+		if !history.PageInfo.HasNextPage {
+			fmt.Printf("could not find a commit from the latest release, generating release note using all commits in branch %s\n", branch)
+			break
+		}
+
+		commitsVariables["commitCursor"] = history.PageInfo.EndCursor
 	}
 
-	// If the repository does not have a release, return an empty string
-	var releaseSHA string
-	if len(releaseSHAQuery.Repository.Refs.Nodes) > 0 {
-		releaseSHA = releaseSHAQuery.Repository.Refs.Nodes[0].Target.Oid
-	}
-
-	return releaseSHA, nil
+	return lastCommit, nil
 }
 
 func (g GitHub) FetchPullRequestsAfterCommit(owner, repo, branch, commitSHA string) ([]PullRequest, error) {
@@ -240,4 +229,36 @@ func (g GitHub) FetchPullRequestsAfterCommit(owner, repo, branch, commitSHA stri
 		pullRequestsVariables["commitCursor"] = pullRequestsQuery.Repository.Ref.Target.Commit.History.PageInfo.EndCursor
 	}
 	return pullRequests, nil
+}
+
+func (g GitHub) FetchLabelsForPullRequest(owner, repo string, pullRequestNumber int) ([]string, error) {
+	var PullRequestlabelsQuery struct {
+		Repository struct {
+			PullRequest struct {
+				Labels struct {
+					Nodes []struct {
+						Name string
+					}
+				} `graphql:"labels(first: 10)"`
+			} `graphql:"pullRequest(number: $prNumber)"`
+		} `graphql:"repository(owner: $owner, name: $name)"`
+	}
+
+	PRVariables := map[string]interface{}{
+		"owner":    githubv4.String(owner),
+		"name":     githubv4.String(repo),
+		"prNumber": githubv4.Int(pullRequestNumber),
+	}
+
+	err := g.client.Query(context.Background(), &PullRequestlabelsQuery, PRVariables)
+	if err != nil {
+		return nil, err
+	}
+
+	var labels []string
+	for _, node := range PullRequestlabelsQuery.Repository.PullRequest.Labels.Nodes {
+		labels = append(labels, node.Name)
+	}
+
+	return labels, nil
 }
