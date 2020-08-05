@@ -20,6 +20,7 @@ var generateCmd = &cobra.Command{
 
 func init() {
 	generateCmd.Flags().String("github-branch", "master", "the branch name of the github repository to pull the pull requests from")
+	generateCmd.Flags().String("last-commit-SHA", "", "will generate a release note using all prs merged up to this commit SHA. If empty, will generate release note until latest commit.")
 }
 
 func generateReleaseNote(cmd *cobra.Command, args []string) {
@@ -37,12 +38,14 @@ func generateReleaseNote(cmd *cobra.Command, args []string) {
 
 	githubBranch, _ := cmd.Flags().GetString("github-branch")
 
-	commitSHA, err := client.FetchLatestReleaseCommitFromBranch(githubOwner, githubRepo, githubBranch, releaseSHAs)
+	startingCommitSHA, err := client.FetchLatestReleaseCommitFromBranch(githubOwner, githubRepo, githubBranch, releaseSHAs)
 	if err != nil {
 		failf("failed to fetch latest release commit from branch: %s", err)
 	}
 
-	pullRequests, err := client.FetchPullRequestsAfterCommit(githubOwner, githubRepo, githubBranch, commitSHA)
+	lastCommitSHA, _ := cmd.Flags().GetString("last-commit-SHA")
+
+	pullRequests, err := client.FetchPullRequestsAfterCommit(githubOwner, githubRepo, githubBranch, startingCommitSHA, lastCommitSHA)
 	if err != nil {
 		failf("failed to fetch pull requests: %s", err)
 	}

@@ -130,7 +130,7 @@ func (g GitHub) FetchLatestReleaseCommitFromBranch(owner, repo, branch string, r
 	return lastCommit, nil
 }
 
-func (g GitHub) FetchPullRequestsAfterCommit(owner, repo, branch, commitSHA string) ([]PullRequest, error) {
+func (g GitHub) FetchPullRequestsAfterCommit(owner, repo, branch, startingCommitSHA, lastCommitSHA string) ([]PullRequest, error) {
 	var pullRequestsQuery struct {
 		Repository struct {
 			Ref struct {
@@ -176,8 +176,9 @@ func (g GitHub) FetchPullRequestsAfterCommit(owner, repo, branch, commitSHA stri
 		"commitCursor": (*githubv4.String)(nil),
 	}
 
+	var appendCommits bool
 	pullRequests := []PullRequest{}
-	seen := map[string]struct{}{}
+	seen := map[string]bool{}
 
 	for {
 		err := g.client.Query(context.Background(), &pullRequestsQuery, pullRequestsVariables)
@@ -186,39 +187,47 @@ func (g GitHub) FetchPullRequestsAfterCommit(owner, repo, branch, commitSHA stri
 		}
 
 		for _, commit := range pullRequestsQuery.Repository.Ref.Target.Commit.History.Nodes {
-			if commit.Oid == commitSHA {
+			if commit.Oid == startingCommitSHA {
 				return pullRequests, nil
+			}
+
+			if lastCommitSHA == "" || commit.Oid == lastCommitSHA {
+				appendCommits = true
 			}
 
 			for _, pr := range commit.AssociatedPullRequests.Nodes {
 				if !pr.Merged {
 					continue
 				}
+
 				if _, exists := seen[pr.ID]; exists {
 					continue
 				}
-				seen[pr.ID] = struct{}{}
 
-				labels := make([]string, len(pr.Labels.Nodes))
-				for i, l := range pr.Labels.Nodes {
-					labels[i] = l.Name
+				seen[pr.ID] = true
+
+				if appendCommits {
+					labels := make([]string, len(pr.Labels.Nodes))
+					for i, l := range pr.Labels.Nodes {
+						labels[i] = l.Name
+					}
+
+					url, err := pr.Url.MarshalJSON()
+					if err != nil {
+						return nil, fmt.Errorf("failed to format url: %w", err)
+					}
+
+					pullRequests = append(pullRequests, PullRequest{
+						ID:     pr.ID,
+						Number: pr.Number,
+						Title:  pr.Title,
+						Body:   pr.Body,
+						Author: pr.Author.Login,
+						Labels: labels,
+						Merged: pr.Merged,
+						Url:    string(url),
+					})
 				}
-
-				url, err := pr.Url.MarshalJSON()
-				if err != nil {
-					return nil, fmt.Errorf("failed to format url: %w", err)
-				}
-
-				pullRequests = append(pullRequests, PullRequest{
-					ID:     pr.ID,
-					Number: pr.Number,
-					Title:  pr.Title,
-					Body:   pr.Body,
-					Author: pr.Author.Login,
-					Labels: labels,
-					Merged: pr.Merged,
-					Url:    string(url),
-				})
 			}
 		}
 
@@ -228,7 +237,6 @@ func (g GitHub) FetchPullRequestsAfterCommit(owner, repo, branch, commitSHA stri
 
 		pullRequestsVariables["commitCursor"] = pullRequestsQuery.Repository.Ref.Target.Commit.History.PageInfo.EndCursor
 	}
-	return pullRequests, nil
 }
 
 func (g GitHub) FetchLabelsForPullRequest(owner, repo string, pullRequestNumber int) ([]string, error) {
