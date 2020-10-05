@@ -50,6 +50,34 @@ func (s *TemplateSuite) TestRemovesEmptySections() {
 	s.NotContains(buf.String(), "no PRs")
 }
 
+func (s *TemplateSuite) TestRemovesEmptySubSections() {
+	sections := []generate.Section{
+		generate.Section{
+			Title: "Section with PRs",
+			Icon:  "🚨",
+			PRs: []generate.PullRequest{
+				generate.PullRequest{
+					Title:  "PR Title",
+					Number: 0,
+					Author: "J.K. Rowling",
+				},
+			},
+		},
+		generate.Section{
+			Title: "Section with empty sub sections",
+			Icon:  "🐞",
+			SubSections: []generate.SubSection{
+				generate.SubSection{
+					Title: "SubSection 1",
+				},
+			},
+		},
+	}
+	buf := new(bytes.Buffer)
+	generate.NewReleaseNoteTemplater(buf).Render(sections)
+	s.NotContains(buf.String(), "SubSection 1")
+}
+
 func (s *TemplateSuite) TestMultipleSections() {
 	sections := []generate.Section{
 		generate.Section{
@@ -74,9 +102,27 @@ func (s *TemplateSuite) TestMultipleSections() {
 				},
 			},
 		},
+		generate.Section{
+			Title: "Section 3",
+			Icon:  "🐞",
+			SubSections: []generate.SubSection{
+				generate.SubSection{
+					Title: "SubSection 1",
+					PRs: []generate.PullRequest{
+						generate.PullRequest{
+							Title:  "PR Title 3",
+							Number: 2,
+							Author: "Michael Kerrisk",
+						},
+					},
+				},
+			},
+		},
 	}
 	buf := new(bytes.Buffer)
 	generate.NewReleaseNoteTemplater(buf).Render(sections)
 	s.Contains(buf.String(), "Section 1")
 	s.Contains(buf.String(), "Section 2")
+	s.Contains(buf.String(), "Section 3")
+	s.Contains(buf.String(), "SubSection 1")
 }

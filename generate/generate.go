@@ -11,9 +11,13 @@ import (
 // The ordering of this list is the order of precedence of the labels
 var ValidLabels = []string{
 	"breaking",
-	"release/no-impact",
-	"enhancement",
 	"bug",
+	"enhancement",
+	"refactor",
+	"testing",
+	"dependencies",
+	"internal",
+	"release/no-impact",
 }
 
 type PullRequestsNotLabelled struct {
@@ -87,7 +91,14 @@ func (g Generator) Generate(prs []github.PullRequest) error {
 		Section{Title: "Breaking", Icon: "🚨", PRs: sectionPRs["breaking"]},
 		Section{Title: "Features", Icon: "✈️", PRs: sectionPRs["enhancement"]},
 		Section{Title: "Bug Fixes", Icon: "🐞", PRs: sectionPRs["bug"]},
-		Section{Title: "No Impact", Icon: "🤷", PRs: sectionPRs["release/no-impact"]},
+		Section{Title: "No Impact", Icon: "🤷", PRs: sectionPRs["release/no-impact"],
+			SubSections: []SubSection{
+				{Title: "Refactors", PRs: sectionPRs["refactor"]},
+				{Title: "Tests", PRs: sectionPRs["testing"]},
+				{Title: "Dependencies", PRs: sectionPRs["dependencies"]},
+				{Title: "Internal Changes", PRs: sectionPRs["internal"]},
+			},
+		},
 	}
 
 	err := g.template.Render(sections)
