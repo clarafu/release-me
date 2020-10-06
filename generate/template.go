@@ -14,14 +14,8 @@ type PullRequest struct {
 }
 
 type Section struct {
-	Title       string
-	Icon        string
-	PRs         []PullRequest
-	SubSections []SubSection
-}
-
-type SubSection struct {
 	Title string
+	Icon  string
 	PRs   []PullRequest
 }
 
@@ -32,7 +26,7 @@ func indent(spaces int, v string) string {
 
 const rawTemplate = `
 {{range $section := .Sections}}
-{{if or $section.PRs $section.SubSections }}
+{{if $section.PRs }}
 
 ## {{$section.Icon}} {{$section.Title}}
 
@@ -40,17 +34,6 @@ const rawTemplate = `
 * {{$pr.Title}} (#{{$pr.Number}}) @{{$pr.Author}} <sub><sup><a name="{{$pr.Number}}" href="#{{$pr.Number}}">:link:</a></sup></sub>  
 {{ $pr.ReleaseNote | indent 2 }}
 {{end}}
-
-{{ range $subsection := $section.SubSections }}
-{{ if $subsection.PRs }}
-{{ printf "- **%s**" $subsection.Title }}
-{{ range $pr := $subsection.PRs }}
-  * {{$pr.Title}} (#{{$pr.Number}}) @{{$pr.Author}} <sub><sup><a name="{{$pr.Number}}" href="#{{$pr.Number}}">:link:</a></sup></sub>  
-{{ $pr.ReleaseNote | indent 4 }}
-{{end}}
-{{end}}
-{{end}}
-
 {{end}}
 {{end}}
 `

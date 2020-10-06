@@ -27,14 +27,10 @@ type GenerateTest struct {
 
 	PRs []github.PullRequest
 
-	ExpectedBreaking   []generate.PullRequest
-	ExpectedFeatures   []generate.PullRequest
-	ExpectedBugFixes   []generate.PullRequest
-	ExpectedRefactor   []generate.PullRequest
-	ExpectedTesting    []generate.PullRequest
-	ExpectedDependency []generate.PullRequest
-	ExpectedInternal   []generate.PullRequest
-	ExpectedNoImpact   []generate.PullRequest
+	ExpectedBreaking []generate.PullRequest
+	ExpectedFeatures []generate.PullRequest
+	ExpectedBugFixes []generate.PullRequest
+	ExpectedNoImpact []generate.PullRequest
 
 	GenerateErr error
 }
@@ -58,35 +54,15 @@ func (s *GenerateSuite) TestGenerate() {
 					Labels: []string{"bug"},
 				},
 				{
-					Title:  "refactor don't worry about it!",
-					Labels: []string{"refactor"},
-				},
-				{
-					Title:  "testing don't worry about it!",
-					Labels: []string{"testing"},
-				},
-				{
-					Title:  "dependencies don't worry about it!",
-					Labels: []string{"dependencies"},
-				},
-				{
-					Title:  "internal change don't worry about it!",
-					Labels: []string{"internal"},
-				},
-				{
-					Title:  "not a change don't worry about it!",
+					Title:  "don't worry about it!",
 					Labels: []string{"release/no-impact"},
 				},
 			},
 
-			ExpectedBreaking:   []generate.PullRequest{{Title: "new breaking change!"}},
-			ExpectedFeatures:   []generate.PullRequest{{Title: "cool new feature!"}},
-			ExpectedBugFixes:   []generate.PullRequest{{Title: "squash that bug!"}},
-			ExpectedRefactor:   []generate.PullRequest{{Title: "refactor don't worry about it!"}},
-			ExpectedTesting:    []generate.PullRequest{{Title: "testing don't worry about it!"}},
-			ExpectedDependency: []generate.PullRequest{{Title: "dependencies don't worry about it!"}},
-			ExpectedInternal:   []generate.PullRequest{{Title: "internal change don't worry about it!"}},
-			ExpectedNoImpact:   []generate.PullRequest{{Title: "not a change don't worry about it!"}},
+			ExpectedBreaking: []generate.PullRequest{{Title: "new breaking change!"}},
+			ExpectedFeatures: []generate.PullRequest{{Title: "cool new feature!"}},
+			ExpectedBugFixes: []generate.PullRequest{{Title: "squash that bug!"}},
+			ExpectedNoImpact: []generate.PullRequest{{Title: "don't worry about it!"}},
 		},
 		{
 			It: "sorts PRs by number",
@@ -134,47 +110,35 @@ func (s *GenerateSuite) TestGenerate() {
 			PRs: []github.PullRequest{
 				{
 					Title:  "new breaking change!",
-					Labels: []string{"enhancement", "breaking", "refactor", "bug"},
+					Labels: []string{"enhancement", "breaking", "release/no-impact", "bug"},
 				},
 			},
 
 			ExpectedBreaking: []generate.PullRequest{{Title: "new breaking change!"}},
 		},
 		{
-			It: "groups PRs as bugs before features and no impact",
+			It: "groups PRs as no impact before features and bugs",
 
 			PRs: []github.PullRequest{
 				{
 					Title:  "super fun pull request",
-					Labels: []string{"enhancement", "refactor", "bug"},
+					Labels: []string{"enhancement", "release/no-impact", "bug"},
 				},
 			},
 
-			ExpectedBugFixes: []generate.PullRequest{{Title: "super fun pull request"}},
+			ExpectedNoImpact: []generate.PullRequest{{Title: "super fun pull request"}},
 		},
 		{
-			It: "groups PRs as features before no impact",
+			It: "groups PRs as features before bugs",
 
 			PRs: []github.PullRequest{
 				{
 					Title:  "best feature ever",
-					Labels: []string{"enhancement", "refactor"},
+					Labels: []string{"enhancement", "bug"},
 				},
 			},
 
 			ExpectedFeatures: []generate.PullRequest{{Title: "best feature ever"}},
-		},
-		{
-			It: "groups PRs as refactors before no impact",
-
-			PRs: []github.PullRequest{
-				{
-					Title:  "best refactor ever",
-					Labels: []string{"release/no-impact", "refactor"},
-				},
-			},
-
-			ExpectedRefactor: []generate.PullRequest{{Title: "best refactor ever"}},
 		},
 		{
 			It: "fails when PR does not have appropriate label",
@@ -289,16 +253,7 @@ omai wa mo shindeiru`,
 					generate.Section{Title: "Breaking", Icon: "🚨", PRs: t.ExpectedBreaking},
 					generate.Section{Title: "Features", Icon: "✈️", PRs: t.ExpectedFeatures},
 					generate.Section{Title: "Bug Fixes", Icon: "🐞", PRs: t.ExpectedBugFixes},
-					generate.Section{
-						Title: "No Impact", Icon: "🤷",
-						PRs: t.ExpectedNoImpact,
-						SubSections: []generate.SubSection{
-							generate.SubSection{Title: "Refactors", PRs: t.ExpectedRefactor},
-							generate.SubSection{Title: "Tests", PRs: t.ExpectedTesting},
-							generate.SubSection{Title: "Dependencies", PRs: t.ExpectedDependency},
-							generate.SubSection{Title: "Internal Changes", PRs: t.ExpectedInternal},
-						},
-					},
+					generate.Section{Title: "No Impact", Icon: "🤷", PRs: t.ExpectedNoImpact},
 				})
 			}
 		})
