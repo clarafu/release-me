@@ -33,24 +33,19 @@ func indent(spaces int, v string) string {
 const rawTemplate = `
 {{range $section := .Sections}}
 {{if or $section.PRs $section.SubSections }}
-
 ## {{$section.Icon}} {{$section.Title}}
-
 {{ range $pr := $section.PRs }}
 * {{$pr.Title}} (#{{$pr.Number}}) @{{$pr.Author}} <sub><sup><a name="{{$pr.Number}}" href="#{{$pr.Number}}">:link:</a></sup></sub>  
 {{ $pr.ReleaseNote | indent 2 }}
 {{end}}
-
 {{ range $subsection := $section.SubSections }}
 {{ if $subsection.PRs }}
-{{ printf "- **%s**" $subsection.Title }}
+* <b>{{$subsection.Title}}</b>
 {{ range $pr := $subsection.PRs }}
   * {{$pr.Title}} (#{{$pr.Number}}) @{{$pr.Author}} <sub><sup><a name="{{$pr.Number}}" href="#{{$pr.Number}}">:link:</a></sup></sub>  
-{{ $pr.ReleaseNote | indent 4 }}
+{{ $pr.ReleaseNote | indent 4 }}{{end}}
 {{end}}
 {{end}}
-{{end}}
-
 {{end}}
 {{end}}
 `
