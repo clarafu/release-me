@@ -30,7 +30,7 @@ type GenerateTest struct {
 	ExpectedBreaking []generate.PullRequest
 	ExpectedFeatures []generate.PullRequest
 	ExpectedBugFixes []generate.PullRequest
-	ExpectedNoImpact []generate.PullRequest
+	ExpectedMisc     []generate.PullRequest
 
 	GenerateErr error
 }
@@ -55,14 +55,14 @@ func (s *GenerateSuite) TestGenerate() {
 				},
 				{
 					Title:  "don't worry about it!",
-					Labels: []string{"release/no-impact"},
+					Labels: []string{"misc"},
 				},
 			},
 
 			ExpectedBreaking: []generate.PullRequest{{Title: "new breaking change!"}},
 			ExpectedFeatures: []generate.PullRequest{{Title: "cool new feature!"}},
 			ExpectedBugFixes: []generate.PullRequest{{Title: "squash that bug!"}},
-			ExpectedNoImpact: []generate.PullRequest{{Title: "don't worry about it!"}},
+			ExpectedMisc:     []generate.PullRequest{{Title: "don't worry about it!"}},
 		},
 		{
 			It: "sorts PRs by number",
@@ -110,31 +110,31 @@ func (s *GenerateSuite) TestGenerate() {
 			PRs: []github.PullRequest{
 				{
 					Title:  "new breaking change!",
-					Labels: []string{"enhancement", "breaking", "release/no-impact", "bug"},
+					Labels: []string{"enhancement", "breaking", "misc", "bug"},
 				},
 			},
 
 			ExpectedBreaking: []generate.PullRequest{{Title: "new breaking change!"}},
 		},
 		{
-			It: "groups PRs as no impact before features and bugs",
+			It: "groups PRs as bugs before features and misc",
 
 			PRs: []github.PullRequest{
 				{
 					Title:  "super fun pull request",
-					Labels: []string{"enhancement", "release/no-impact", "bug"},
+					Labels: []string{"enhancement", "misc", "bug"},
 				},
 			},
 
-			ExpectedNoImpact: []generate.PullRequest{{Title: "super fun pull request"}},
+			ExpectedBugFixes: []generate.PullRequest{{Title: "super fun pull request"}},
 		},
 		{
-			It: "groups PRs as features before bugs",
+			It: "groups PRs as features before misc",
 
 			PRs: []github.PullRequest{
 				{
 					Title:  "best feature ever",
-					Labels: []string{"enhancement", "bug"},
+					Labels: []string{"enhancement", "misc"},
 				},
 			},
 
@@ -253,7 +253,7 @@ omai wa mo shindeiru`,
 					generate.Section{Title: "Breaking", Icon: "🚨", PRs: t.ExpectedBreaking},
 					generate.Section{Title: "Features", Icon: "✈️", PRs: t.ExpectedFeatures},
 					generate.Section{Title: "Bug Fixes", Icon: "🐞", PRs: t.ExpectedBugFixes},
-					generate.Section{Title: "No Impact", Icon: "🤷", PRs: t.ExpectedNoImpact},
+					generate.Section{Title: "Miscellaneous", Icon: "🤷", PRs: t.ExpectedMisc},
 				})
 			}
 		})
