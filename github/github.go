@@ -42,12 +42,13 @@ func New(token string) GitHub {
 	}
 }
 
-func (g GitHub) FetchCommitsFromReleases(owner, repo string) (map[string]bool, error) {
+func (g GitHub) FetchCommitsFromReleases(owner, repo string) (map[string]string, error) {
 	var releaseSHAsQuery struct {
 		Repository struct {
 			Releases struct {
 				Nodes []struct {
 					Tag struct {
+						Name string
 						Target struct {
 							Oid string
 						}
@@ -67,15 +68,15 @@ func (g GitHub) FetchCommitsFromReleases(owner, repo string) (map[string]bool, e
 		return nil, err
 	}
 
-	releaseSHAs := map[string]bool{}
+	releaseSHAs := map[string]string{}
 	for _, release := range releaseSHAsQuery.Repository.Releases.Nodes {
-		releaseSHAs[release.Tag.Target.Oid] = true
+		releaseSHAs[release.Tag.Target.Oid] = release.Tag.Name
 	}
 
 	return releaseSHAs, nil
 }
 
-func (g GitHub) FetchLatestReleaseCommitFromBranch(owner, repo, branch string, releaseSHAs map[string]bool) (string, error) {
+func (g GitHub) FetchLatestReleaseCommitFromBranch(owner, repo, branch string, releaseSHAs map[string]string) (string, error) {
 	var commitsQuery struct {
 		Repository struct {
 			Ref struct {
@@ -114,7 +115,8 @@ func (g GitHub) FetchLatestReleaseCommitFromBranch(owner, repo, branch string, r
 		for _, commit := range history.Nodes {
 			lastCommit = commit.Oid
 
-			if _, found := releaseSHAs[commit.Oid]; found {
+			if releaseName, found := releaseSHAs[commit.Oid]; found && !isPatchRelease(releaseName) {
+				fmt.Println(releaseName)
 				return commit.Oid, nil
 			}
 		}
