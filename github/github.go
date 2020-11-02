@@ -115,8 +115,9 @@ func (g GitHub) FetchLatestReleaseCommitFromBranch(owner, repo, branch string, r
 		for _, commit := range history.Nodes {
 			lastCommit = commit.Oid
 
+			// Skips over any patch releases. This is so that we will always start
+			// fetching commits from the last major or minor release.
 			if releaseName, found := releaseSHAs[commit.Oid]; found && !isPatchRelease(releaseName) {
-				fmt.Println(releaseName)
 				return commit.Oid, nil
 			}
 		}
