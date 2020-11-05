@@ -21,6 +21,8 @@ var generateCmd = &cobra.Command{
 func init() {
 	generateCmd.Flags().String("github-branch", "master", "the branch name of the github repository to pull the pull requests from")
 	generateCmd.Flags().String("last-commit-SHA", "", "will generate a release note using all prs merged up to this commit SHA. If empty, will generate release note until latest commit.")
+	generateCmd.Flags().String("release-version", "", "the version that the release note will be generated for")
+	generateCmd.MarkFlagRequired("release-version")
 }
 
 func generateReleaseNote(cmd *cobra.Command, args []string) {
@@ -44,32 +46,11 @@ func generateReleaseNote(cmd *cobra.Command, args []string) {
 	// and compare each commit SHA to the list of release commit SHAs. Once we
 	// find a match, this is the the point at which we want to start generating
 	// the release notes for.
-  //
-	// We also will skip over any commit SHAs that are
-	// associated to a patch release because we only want to start from a
-	// major/minor release.
-	startingCommitSHA, err := client.FetchLatestReleaseCommitFromBranch(githubOwner, githubRepo, githubBranch, releaseSHAs)
+	versionToRelease, _ := cmd.Flags().GetString("release-version")
+	startingCommitSHA, err := client.FetchLatestReleaseCommitFromBranch(githubOwner, githubRepo, githubBranch, versionToRelease, releaseSHAs)
 	if err != nil {
 		failf("failed to fetch latest release commit from branch: %s", err)
 	}
-
-	                       // 5904,5905
-	// release/6.5.x: 	6.5.0 -------------- 6.5.1
-												// 6602,5904,5905
-	// release/6.6.x:  6.5.0 ---------------6.5.1--------------- current (6.6.0)
-
-	// patchReleases []patches := {6.5.1}
-
-	// Fetch pull requests from patch releases that were skipped over while
-	// finding the starting commit SHA. These pull requests will be used to know
-	// which pull requests to ignore within the release note generation. This is
-	// because we don't want to include any pull requests that have already been
-	// mentioned in previous patch releases
-	patchReleasesPRs, err := client.FetchPullRequestsFromPatchReleases(githubOwner, githubRepo, githubBranch, releaseSHAs)
-	if err != nil {
-		failf("failed to fetch pull requests from patches: %s", err)
-	}
-
 
 	lastCommitSHA, _ := cmd.Flags().GetString("last-commit-SHA")
 

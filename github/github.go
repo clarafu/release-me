@@ -48,7 +48,7 @@ func (g GitHub) FetchCommitsFromReleases(owner, repo string) (map[string]string,
 			Releases struct {
 				Nodes []struct {
 					Tag struct {
-						Name string
+						Name   string
 						Target struct {
 							Oid string
 						}
@@ -76,7 +76,7 @@ func (g GitHub) FetchCommitsFromReleases(owner, repo string) (map[string]string,
 	return releaseSHAs, nil
 }
 
-func (g GitHub) FetchLatestReleaseCommitFromBranch(owner, repo, branch string, releaseSHAs map[string]string) (string, error) {
+func (g GitHub) FetchLatestReleaseCommitFromBranch(owner, repo, branch, versionToRelease string, releaseSHAs map[string]string) (string, error) {
 	var commitsQuery struct {
 		Repository struct {
 			Ref struct {
@@ -115,10 +115,15 @@ func (g GitHub) FetchLatestReleaseCommitFromBranch(owner, repo, branch string, r
 		for _, commit := range history.Nodes {
 			lastCommit = commit.Oid
 
-			// Skips over any patch releases. This is so that we will always start
-			// fetching commits from the last major or minor release.
-			if releaseName, found := releaseSHAs[commit.Oid]; found && !isPatchRelease(releaseName) {
-				return commit.Oid, nil
+			// If release-version is a Patch then don't skip patch releases
+			if previousRelease, found := releaseSHAs[commit.Oid]; found {
+				if isPatchRelease(versionToRelease) {
+					return commit.Oid, nil
+				} else { //Major/Minor skip patch releases
+					if !isPatchRelease(previousRelease) {
+						return commit.Oid, nil
+					}
+				}
 			}
 		}
 
