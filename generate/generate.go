@@ -11,9 +11,9 @@ import (
 // The ordering of this list is the order of precedence of the labels
 var ValidLabels = []string{
 	"breaking",
+	"misc",
 	"bug",
 	"enhancement",
-	"misc",
 }
 
 type PullRequestsNotLabelled struct {
