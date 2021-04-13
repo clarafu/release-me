@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"strings"
 
 	"github.com/clarafu/release-me/generate"
 	"github.com/clarafu/release-me/github"
@@ -24,7 +23,7 @@ func init() {
 	generateCmd.Flags().String("github-branch", "master", "the branch name of the github repository to pull the pull requests from")
 	generateCmd.Flags().String("last-commit-SHA", "", "will generate a release note using all prs merged up to this commit SHA. If empty, will generate release note until latest commit.")
 	generateCmd.Flags().String("release-version", "", "the version that the release note will be generated for")
-	generateCmd.Flags().String("ignore-authors", "", "comma separated list of github handles, any PRs authored by these handles will be ignored.")
+	generateCmd.Flags().StringSlice("ignore-authors", nil, "comma separated list of github handles, any PRs authored by these handles will be ignored.")
 	generateCmd.Flags().String("ignore-release-regex", "", "a regular expression indicating releases to ignore when determining the previous release")
 	generateCmd.MarkFlagRequired("release-version")
 }
@@ -73,9 +72,7 @@ func generateReleaseNote(cmd *cobra.Command, args []string) {
 	}
 
 	lastCommitSHA, _ := cmd.Flags().GetString("last-commit-SHA")
-
-	ignoreAuthorsStr, _ := cmd.Flags().GetString("ignore-authors")
-	ignoreAuthors := strings.Split(ignoreAuthorsStr, ",")
+	ignoreAuthors, _ := cmd.Flags().GetStringSlice("ignore-authors")
 
 	// Fetch all pull requests that are associated to a commit after the starting
 	// commit SHA. If the pull request is already used for a patch release, it is
