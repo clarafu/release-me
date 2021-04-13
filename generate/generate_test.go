@@ -117,7 +117,7 @@ func (s *GenerateSuite) TestGenerate() {
 			ExpectedBreaking: []generate.PullRequest{{Title: "new breaking change!"}},
 		},
 		{
-			It: "groups PRs as bugs before features and misc",
+			It: "groups PRs as misc before bugs and features",
 
 			PRs: []github.PullRequest{
 				{
@@ -126,10 +126,10 @@ func (s *GenerateSuite) TestGenerate() {
 				},
 			},
 
-			ExpectedBugFixes: []generate.PullRequest{{Title: "super fun pull request"}},
+			ExpectedMisc: []generate.PullRequest{{Title: "super fun pull request"}},
 		},
 		{
-			It: "groups PRs as features before misc",
+			It: "groups PRs as misc before features",
 
 			PRs: []github.PullRequest{
 				{
@@ -138,7 +138,7 @@ func (s *GenerateSuite) TestGenerate() {
 				},
 			},
 
-			ExpectedFeatures: []generate.PullRequest{{Title: "best feature ever"}},
+			ExpectedMisc: []generate.PullRequest{{Title: "best feature ever"}},
 		},
 		{
 			It: "fails when PR does not have appropriate label",
