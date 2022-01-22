@@ -30,8 +30,9 @@ func init() {
 
 func generateReleaseNote(cmd *cobra.Command, args []string) {
 	githubToken, _ := cmd.Flags().GetString("github-token")
+	githubV4Endpoint, _ := cmd.Flags().GetString("v4-endpoint")
 
-	client := github.New(githubToken)
+	client := github.New(githubToken, githubV4Endpoint)
 
 	githubOwner, _ := cmd.Flags().GetString("github-owner")
 	githubRepo, _ := cmd.Flags().GetString("github-repo")

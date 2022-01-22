@@ -21,6 +21,7 @@ func init() {
 	rootCmd.PersistentFlags().String("github-owner", "", "the login field of a github user or organization")
 	rootCmd.PersistentFlags().String("github-repo", "", "the name of the github repository")
 	rootCmd.PersistentFlags().String("github-token", "", "github oauth token to authenticate with")
+	rootCmd.PersistentFlags().String("v4-endpoint", "", "the github enterprise graphQL API v4 endpoint")
 
 	rootCmd.MarkFlagRequired("github-token")
 	rootCmd.MarkFlagRequired("github-owner")

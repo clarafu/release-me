@@ -32,13 +32,20 @@ func (pr PullRequest) HasLabel(label string) bool {
 	return false
 }
 
-func New(token string) GitHub {
+func New(token string, githubV4Endpoint string) GitHub {
 	src := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
 	)
 	httpClient := oauth2.NewClient(context.Background(), src)
-	return GitHub{
-		client: githubv4.NewClient(httpClient),
+
+	if githubV4Endpoint == "" {
+		return GitHub{
+			client: githubv4.NewClient(httpClient),
+		}
+	} else {
+		return GitHub{
+			client: githubv4.NewEnterpriseClient(githubV4Endpoint, httpClient),
+		}
 	}
 }
 
