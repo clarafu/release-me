@@ -24,19 +24,26 @@ There are two commands that you can run using this CLI: `generate` and `validate
 
 The `generate` command accepts the following flags
 
-| Flag                    | Example      | Required   | Desciptions           
-| ----------------------- | ------------ | ---------- | ---------------------
-| `release-version`       | `1.0.0`      | True       | The version that the release note will be generated for.
-| `github-branch`         | `master`     | False      | The branch name of the GitHub repository to pull the pull request from. Defaults to master.
-| `last-commit-SHA`       | `d6cd1..`    | False      | Generates a release note using all prs merged up to this commit SHA. If it is empty, it will generate a release note until latest commit.
-| `ignore-authors`        | `clara,alex` | False      | Comma separated list of github handles. Any PRs authored by these handles will be ignored.
-| `ignore-release-regex`  | `1.2.*`      | False      | A regular expression indicating releases to ignore when determining the release to start generating the release note from.
+| Flag                    | Example     | Required | Desciptions           
+| ----------------------- | ----------- | -------- | ---------------------
+| `release-version`       | `1.0.0`     | True     | The version that the release note will be generated for.
+| `github-branch`         | `master`.   | False    | The branch name of the GitHub repository to pull the pull request from. Defaults to master.
+| `last-commit-SHA`       | `d6cd1..`.  | False    | Generates a release note using all prs merged up to this commit SHA. If it is empty, it will generate a release note until latest commit.
+| `ignore-authors`        | `clara,alex`| False    | Comma separated list of github handles. Any PRs authored by these handles will be ignored.
+| `ignore-release-regex`  | `1.2.*`     | False    | A regular expression indicating releases to ignore when determining the release to start generating the release note from.
 
 
 For example, you can generate a release note using the following command:
 
 ```
-release-me generate --github-owner=<owner> --github-repo=<repo> --github-token=<token> --release-version=<version>
+./releaseme generate \
+  --github-token=$GITHUB_TOKEN \
+  --github-owner=$GITHUB_OWNER \
+  --github-repo=$GITHUB_REPO \
+  --github-branch=$GITHUB_BRANCH \
+  --last-commit-SHA=$LAST_COMMIT_SHA \
+  --release-version=$RELEASE_VERSION \
+  --ignore-authors=dependabot \
 ```
 
 The CLI grabs all the pull requests merged after commit that is referenced by the latest tag. Then it sorts the pull requests by number in ascending order and fetches the optional release note description from the pull request body. It uses the labels on the pull request to sort them into sections (and also priority) and uses the go templating library to construct the release note and output it to stdout.
@@ -52,14 +59,12 @@ You can also add a `priority` label to the pull request if you want it to be at 
 
 The release note will be generated using the *title*, *pr number*, *author* and *optional release note description*. The optional release note description will be found in the pull request description/body under the header `## Release Note`. It will be found using regex so it will also accept things like `# Release Note` or `## release notes`.
 
-An example of the note that it will generate is
+An example of the note that it will generate:
 
-```
 ## ✈️ Features
 
 * Add flag to ignore specific PR authors (#3) @chenbh <sub><sup><a name="3" href="#3">:link:</a></sup></sub>  
   * Can be used for pull requests created from bots, ex. dependabot
-```
 
 To summarize, a pull request will need to be labeled with either breaking, enhancement, bug or release/no-impact for it grouped into the corresponding section in the release note and for the test to pass in order to merge the pr.
 
@@ -76,5 +81,9 @@ You can also validate that the pull request has valid labels through the `valida
 For example, you can validate a pull request by:
 
 ```
-release-me validate --github-owner=<owner> --github-repo=<repo> --github-token=<token> --pr-number=<number>
+./releaseme validate \
+  --github-token=$GITHUB_TOKEN \
+  --github-owner=$GITHUB_OWNER \
+  --github-repo=$GITHUB_REPO \
+  --pr-number=123 \
 ```
